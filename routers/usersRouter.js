@@ -4,8 +4,8 @@ const userProvider = require('../providers/userProvider')
 const validateUserRegisterInputMiddleware = require('../middlewares/validateUserRegisterInput')
 const generateHashPasswordMiddleware = require('../middlewares/hashRegisterPassword')
 
-const mailSender = require('../Utils/mailSender')
-const tokenGenerator = require('../Utils/tokenGenerator')
+const mailSender = require('../utils/mailSender')
+const tokenGenerator = require('../utils/tokenGenerator')
 
 Router.get('/', async (req, res) => {
     try {
@@ -15,7 +15,16 @@ Router.get('/', async (req, res) => {
         throw error
     }
 })
-
+Router.get('/verify/:token', async (req, res) => {
+    try {
+        const payload = await tokenGenerator.decodeToken(req.params.token || '')
+        const result = await userProvider.activeUserByID(payload.user_id, true)
+        console.log('result: ', result)
+        res.status(200).json(payload)
+    } catch (error) {
+        res.status(500).json({ message: error.message })
+    }
+})
 Router.get('/:id', async (req, res) => {
     try {
         const result = await userProvider.getUserByID(req.params.id)
@@ -43,8 +52,11 @@ Router.put('/:id', async (req, res) => {
 Router.delete('/:email', async (req, res) => {
     try {
         const user = await userProvider.getUserByEmail(req.params.email)
-        const deletedUserCount = await userProvider.deleteUserByID(user._id)
-        res.status(200).json({ rowDeleted: deletedUserCount.result.n })
+        if (user) {
+            const deletedUserCount = await userProvider.deleteUserByID(user._id)
+            return res.status(200).json({ rowDeleted: deletedUserCount.result.n })
+        }
+        res.status(404).json({ message: "user_not_found" })
     } catch (error) {
         res.status(500).json({ message: error.message })
     }
@@ -53,8 +65,11 @@ Router.post('/', validateUserRegisterInputMiddleware, generateHashPasswordMiddle
     try {
         const result = await userProvider.createUser(req.body)
         const registeredUser = result.ops[0]
-        const userID = registeredUser._id
-        const token = await tokenGenerator({ user_id: userID })
+        const userID = registeredUser._id.toString()
+        const token = await tokenGenerator.generateToken({ user_id: userID }, {
+            expiresIn: '7d'
+        })
+
         const mailSendResult = await mailSender({
             to: registeredUser.Email,
             subject: 'Confirm email',

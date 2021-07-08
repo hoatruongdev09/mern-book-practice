@@ -1,4 +1,4 @@
-const generatePassword = require('../Utils/generateHashPassword')
+const generatePassword = require('../utils/generateHashPassword')
 
 const generateHashPasswordMiddleware = async (req, res, next) => {
     const { password } = req.body

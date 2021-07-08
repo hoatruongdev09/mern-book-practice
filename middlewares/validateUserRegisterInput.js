@@ -1,5 +1,5 @@
-const validateEmail = require('../Utils/emailValidation')
-const validatePassword = require('../Utils/validatePassword')
+const validateEmail = require('../utils/emailValidation')
+const validatePassword = require('../utils/validatePassword')
 
 const validateUserRegisterInput = (req, res, next) => {
     const { password, email } = req.body

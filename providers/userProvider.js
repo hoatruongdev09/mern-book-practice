@@ -52,7 +52,7 @@ const getUserByID = async (id) => {
 const deleteUserByID = async (id) => {
     try {
         const userClt = await getUserCollection()
-        return await userClt.deleteOne({ "_id": ObjectId })
+        return await userClt.deleteOne({ "_id": ObjectId(id) })
     } catch (error) {
         throw error
     }
@@ -85,4 +85,13 @@ const updateUser = async ({ id, firstName = '', lastName = '', avatar = '', addr
     }
 }
 
-module.exports = { createUser, updateUser, getUserByEmail, getUserByID, deleteUserByID, activeUserByID, getListUsers }
+
+module.exports = {
+    createUser,
+    updateUser,
+    getUserByEmail,
+    getUserByID,
+    deleteUserByID,
+    activeUserByID,
+    getListUsers
+}
