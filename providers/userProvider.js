@@ -27,7 +27,8 @@ const createUser = async ({ firstName = '', lastName = '', avatar = '', address 
             "Password": password,
             "Email": email,
             "Privilege": privilege,
-            "Active": true
+            "Active": true,
+            "Verified": false
         })
     } catch (error) {
         throw error
@@ -53,6 +54,18 @@ const deleteUserByID = async (id) => {
     try {
         const userClt = await getUserCollection()
         return await userClt.deleteOne({ "_id": ObjectId(id) })
+    } catch (error) {
+        throw error
+    }
+}
+const verifyUserByID = async (id, active) => {
+    try {
+        const userClt = await getUserCollection()
+        return await userClt.updateOne({ "_id": ObjectId(id) }, {
+            $set: {
+                "Verified": active
+            }
+        })
     } catch (error) {
         throw error
     }
@@ -93,5 +106,6 @@ module.exports = {
     getUserByID,
     deleteUserByID,
     activeUserByID,
-    getListUsers
+    getListUsers,
+    verifyUserByID
 }

@@ -1,8 +1,10 @@
 const Router = require('express').Router()
 const userProvider = require('../providers/userProvider')
+const userVerifyProvider = require('../providers/userVerifyProvider')
 
 const validateUserRegisterInputMiddleware = require('../middlewares/validateUserRegisterInput')
 const generateHashPasswordMiddleware = require('../middlewares/hashRegisterPassword')
+const verifyUserMiddleware = require('../middlewares/verifyUser')
 
 const mailSender = require('../utils/mailSender')
 const tokenGenerator = require('../utils/tokenGenerator')
@@ -15,12 +17,16 @@ Router.get('/', async (req, res) => {
         throw error
     }
 })
-Router.get('/verify/:token', async (req, res) => {
+Router.get('/verify/:token', verifyUserMiddleware, async (req, res) => {
     try {
-        const payload = await tokenGenerator.decodeToken(req.params.token || '')
-        const result = await userProvider.activeUserByID(payload.user_id, true)
-        console.log('result: ', result)
-        res.status(200).json(payload)
+        const record = await userVerifyProvider.getRecordByID(req.params.token)
+        if (!record) {
+            return res.status(404).json({ message: "token_not_found" })
+        }
+        console.log('user id: ', record['User-ID'])
+        const result = await userProvider.verifyUserByID(record['User-ID'], true)
+        res.status(200).json({ message: "OK" })
+        await userVerifyProvider.removeRecordByID(record._id.toString())
     } catch (error) {
         res.status(500).json({ message: error.message })
     }
@@ -64,19 +70,21 @@ Router.delete('/:email', async (req, res) => {
 Router.post('/', validateUserRegisterInputMiddleware, generateHashPasswordMiddleware, async (req, res) => {
     try {
         const result = await userProvider.createUser(req.body)
+
+        res.status(200).json({ message: "OK" })
+
         const registeredUser = result.ops[0]
         const userID = registeredUser._id.toString()
-        const token = await tokenGenerator.generateToken({ user_id: userID }, {
-            expiresIn: '7d'
-        })
+
+        const userVerifyRecord = await userVerifyProvider.createNewRecord(userID)
+        const idRecord = userVerifyRecord.ops[0]._id.toString()
 
         const mailSendResult = await mailSender({
             to: registeredUser.Email,
             subject: 'Confirm email',
-            text: `please click link: localhost:${process.env.PORT || 8000}/verify/${token}`
+            text: `please click link: localhost:${process.env.PORT || 8000}/verify/${idRecord}`
         })
         console.log(mailSendResult)
-        res.status(200).json({ message: "OK" })
     } catch (error) {
         console.log(error.message)
         if (error.message == "email_existed") {
